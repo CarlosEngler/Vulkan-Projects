@@ -1,0 +1,8 @@
+# Ignore object files
+obj/
+
+# Ignore binary files
+bin/
+
+# Ignore Visual Studio Code settings
+.vscode/
