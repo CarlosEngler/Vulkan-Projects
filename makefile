@@ -1,7 +1,19 @@
 # Compiler and linker settings
 CXX      := g++
-CXXFLAGS := -std=c++17 -O2 -Iinclude
+
+# Build type: Release or Debug (default is Release)
+BUILD_TYPE ?= Release
+
+ifeq ($(BUILD_TYPE), Debug)
+    CXXFLAGS := -std=c++17 -g -O0 -Iinclude
+    DEFINES  := -DDEBUG
+else
+    CXXFLAGS := -std=c++17 -O2 -DNDEBUG -Iinclude
+    DEFINES  :=
+endif
+
 LDFLAGS  := -lglfw -lvulkan -ldl -lpthread -lX11 -lXxf86vm -lXrandr -lXi
+
 BUILD_DIR := bin
 OBJ_DIR   := obj
 SRC_DIR   := src
@@ -25,11 +37,11 @@ $(PROGRAMS): %: $(BUILD_DIR)/%
 
 # Link object files to create the binary
 $(BUILD_DIR)/%: $(OBJ_DIR)/%.o | $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DEFINES) -o $@ $< $(LDFLAGS)
 
 # Compile source files to object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(DEFINES) -c $< -o $@
 
 # Create build and object directories if they don't exist
 $(BUILD_DIR):
@@ -38,17 +50,25 @@ $(BUILD_DIR):
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
+.PHONY: debug
+debug:
+	$(MAKE) BUILD_TYPE=Debug
+
+.PHONY: release
+release:
+	$(MAKE) BUILD_TYPE=Release
+
 .PHONY: ex
 ex:
 	@$(eval FILE := $(filter-out $@,$(MAKECMDGOALS)))
 	@if [ -z "$(FILE)" ]; then \
-		echo "Usage: make ex filename"; \
+		echo "Usage: make ex filename [BUILD_TYPE=Debug/Release]"; \
 		exit 1; \
 	fi
 	@$(eval BASENAME := $(basename $(notdir $(FILE))))
 	@echo "Compiling and executing '$(BASENAME)'..."
 	@mkdir -p $(BUILD_DIR)
-	$(CXX) $(CXXFLAGS) -o $(BUILD_DIR)/$(BASENAME) $(SRC_DIR)/$(BASENAME).cpp $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(DEFINES) -o $(BUILD_DIR)/$(BASENAME) $(SRC_DIR)/$(BASENAME).cpp $(LDFLAGS)
 	@echo "Running '$(BASENAME)':"
 	@./$(BUILD_DIR)/$(BASENAME)
 
@@ -60,7 +80,7 @@ clean:
 # Run a specific program
 .PHONY: run
 run:
-	@echo "Please specify the program to run, e.g., 'make run PROGRAM=program1'"
+	@echo "Please specify the program to run, e.g., 'make run PROGRAM=program1 [BUILD_TYPE=Debug/Release]'"
 	@false
 
 .PHONY: run-%

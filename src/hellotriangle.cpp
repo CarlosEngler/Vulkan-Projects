@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
+#include <cstring>
 
 class HelloTriangleApplication
 {
@@ -23,6 +24,17 @@ private:
 GLFWwindow *window;
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
+
+const std::vector<const char*> validationLayers = {
+    "VK_LAYER_KHRONOS_validation"
+};
+
+#ifdef NDEBUG
+    const bool enableValidationLayers = false;
+#else
+    const bool enableValidationLayers = true;
+#endif
+
 
 VkInstance instance;
 
@@ -60,6 +72,11 @@ void cleanup()
 
 void createInstance()
 {
+	// Check if validation layers are available
+	if (enableValidationLayers && !checkValidationLayerSupport()) {
+        throw std::runtime_error("validation layers requested, but not available!");
+    }
+
 	// Optional first struct
 	// Defines information of the application created by the user, passing it into a struct that is then passed to the GPU driver
 	VkApplicationInfo appInfo{};         // has a null pnext pointer
@@ -84,7 +101,12 @@ void createInstance()
 	createInfo.enabledExtensionCount = glfwExtensionCount;
 	createInfo.ppEnabledExtensionNames = glfwExtensions;         // Contains global extensions that are required by glfw
 
-	createInfo.enabledLayerCount = 0;         // Determine the global validation layers to enable
+	if (enableValidationLayers) {
+    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+    createInfo.ppEnabledLayerNames = validationLayers.data();
+	} else {
+    createInfo.enabledLayerCount = 0;
+	}        // Determine the global validation layers to enable
 
 	// Now we can create the instance
 	if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
@@ -109,6 +131,32 @@ void checkExtensions(){
 		std::cout << '\t' << extension.extensionName << std::endl;
 	}
 }
+
+bool checkValidationLayerSupport() {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    std::vector<VkLayerProperties> availableLayers(layerCount);
+    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+    for (const char* layerName : validationLayers) {
+    bool layerFound = false;
+
+    for (const auto& layerProperties : availableLayers) {
+        if (strcmp(layerName, layerProperties.layerName) == 0) {
+            layerFound = true;
+            break;
+        }
+    }
+
+    if (!layerFound) {
+        return false;
+    }
+}
+
+return true;
+}
+
 };
 
 int main()
